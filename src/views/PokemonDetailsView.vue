@@ -1,20 +1,29 @@
 <script setup>
 import { ref, onMounted } from 'vue';
 import { useRoute } from 'vue-router';
-import { usePokemonStore } from '@/stores/pokemonStore';
+import {db} from '@/js/firebase.js';
+import {doc, getDoc} from 'firebase/firestore';
 
 const route = useRoute();
-const pokemonStore = usePokemonStore();
 const thePokemon = ref(null);
 
-onMounted(() => {
-    if (pokemonStore.pokemons.length > 0) {
-        thePokemon.value = pokemonStore.pokemons.find(pokemon => pokemon.name === route.params.name);
-    } else {
-        pokemonStore.fetchPokemons().then(() => {
-            thePokemon.value = pokemonStore.pokemons.find(pokemon => pokemon.name === route.params.name);
-        });
+async function fetchPokemon() {
+    const pokemonRef = doc(db, 'pokedex', route.params.name);
+    const pokemonSnap = await getDoc(pokemonRef);
+    if (pokemonSnap.exists()) {
+        const pokemon = {
+            name: pokemonSnap.id,
+            image: pokemonSnap.data().image,
+            japanese_name: pokemonSnap.data().japanese,
+            type1: pokemonSnap.data().type1,
+            type2: pokemonSnap.data().type2,
+            evolution: pokemonSnap.data().evolution,
+        }
+        thePokemon.value = pokemon;
     }
+}
+onMounted(() => {
+    fetchPokemon();
 });
 </script>
 
@@ -27,7 +36,7 @@ onMounted(() => {
         <p>Evolution: {{ thePokemon.evolution }}</p>
     </div>
     <div v-else>
-        <h1>Loading details for: {{ pokemonName }}</h1>
+        <h1>Loading details for: {{ route.params.name }}</h1>
     </div>
 </template>
 
